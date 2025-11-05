@@ -5,7 +5,7 @@ import os
 
 # 设置页面配置
 st.set_page_config(
-    page_title="雨刷查询",
+    page_title="德国赫纳雨刷查询",
     page_icon="🚗",
     layout="centered",
     initial_sidebar_state="collapsed"
