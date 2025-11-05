@@ -5,7 +5,7 @@ import os
 
 # 设置页面配置
 st.set_page_config(
-    page_title="德国赫纳雨刷查询",
+    page_title="雨刷查询",
     page_icon="🚗",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -44,8 +44,14 @@ def search_wiper_specs(conn, search_term):
 
 # 主页面
 def main():
+    # 显示图片 - 替换为你的图片链接
+    st.image(
+        "https://5b0988e595225.cdn.sohucs.com/images/20190628/c3887e7c8841462bb0e6e27bf3c84062.jpeg",
+        width=100  # 调整图片大小
+    )
+    
     # 简洁标题
-    st.markdown("<h2 style='text-align: center;'>🚗 德国赫纳雨刷查询</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>雨刷查询</h2>", unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
