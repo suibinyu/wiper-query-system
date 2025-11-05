@@ -51,7 +51,7 @@ def main():
     )
     
     # 简洁标题
-    st.markdown("<h2 style='text-align: center; margin-top: -10px;'>雨刷查询</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; margin-top: -10px;'>"favicon.ico"雨刷查询</h2>", unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
