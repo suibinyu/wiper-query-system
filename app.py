@@ -3,10 +3,10 @@ import pandas as pd
 import sqlite3
 import os
 
-# 设置页面配置 - 更新页面图标
+# 设置页面配置 - 使用本地的favicon.ico
 st.set_page_config(
     page_title="雨刷查询",
-    page_icon="https://5b0988e595225.cdn.sohucs.com/images/20190628/c3887e7c8841462bb0e6e27bf3c84062.jpeg",
+    page_icon="favicon.ico",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
@@ -44,14 +44,14 @@ def search_wiper_specs(conn, search_term):
 
 # 主页面
 def main():
-    # 显示图片 - 使用相同的图片链接
+    # 显示本地图片
     st.image(
-        "https://5b0988e595225.cdn.sohucs.com/images/20190628/c3887e7c8841462bb0e6e27bf3c84062.jpeg",
-        width=80  # 稍微调小一点，更协调
+        "favicon.ico",
+        width=80
     )
     
     # 简洁标题
-    st.markdown("<h2 style='text-align: center;'>雨刷查询</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; margin-top: -10px;'>雨刷查询</h2>", unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
