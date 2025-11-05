@@ -5,6 +5,7 @@ import os
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
+import base64
 
 # 设置页面配置
 st.set_page_config(
@@ -14,25 +15,42 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 初始化数据库
+# 初始化数据库 - 修复文件路径问题
 @st.cache_resource
 def init_database():
     """初始化数据库"""
     try:
-        # 使用相对路径
+        # 在 Streamlit Cloud 中，文件路径需要特殊处理
         excel_file_path = "wiper_data.xlsx"
         
+        # 检查文件是否存在
         if not os.path.exists(excel_file_path):
-            st.error(f"找不到数据文件: {excel_file_path}")
+            st.error(f"❌ 找不到数据文件: {excel_file_path}")
+            st.info("请确保 wiper_data.xlsx 文件已上传到 GitHub 仓库的根目录")
+            
+            # 显示当前目录的文件列表，帮助调试
+            st.write("当前目录文件列表:")
+            current_files = []
+            for root, dirs, files in os.walk('.'):
+                for file in files:
+                    current_files.append(os.path.join(root, file))
+            st.write(current_files)
+            
             return None
         
         # 读取Excel数据
+        st.info("正在读取Excel文件...")
         df = pd.read_excel(excel_file_path)
+        st.success(f"✅ 成功读取Excel文件，共 {len(df)} 条记录")
+        
+        # 显示列名确认
+        st.write("数据列名:", list(df.columns))
         
         # 创建数据库连接
         conn = sqlite3.connect('wiper_system.db', check_same_thread=False)
         
         # 导入数据到SQLite
+        st.info("正在导入数据到数据库...")
         df.to_sql('wiper_specs', conn, if_exists='replace', index=False)
         
         # 创建查询日志表
@@ -52,10 +70,15 @@ def init_database():
         
         conn.commit()
         st.success("✅ 数据库初始化完成!")
+        
+        # 显示数据预览
+        st.subheader("数据预览")
+        st.dataframe(df.head(5), use_container_width=True)
+        
         return conn
         
     except Exception as e:
-        st.error(f"❌ 数据库初始化失败: {e}")
+        st.error(f"❌ 数据库初始化失败: {str(e)}")
         return None
 
 # 查询函数
@@ -142,37 +165,6 @@ def frontend_page(conn):
         - 支持模糊搜索，输入部分名称即可
         """)
 
-# 后台管理页面
-def admin_page(conn):
-    """后台管理界面"""
-    if not check_admin_password():
-        return
-    
-    st.title("⚙️ 管理后台")
-    st.markdown("---")
-    
-    # 管理菜单
-    menu_option = st.sidebar.radio(
-        "管理功能",
-        ["📊 数据概览", "📈 使用统计", "✏️ 数据管理", "🔍 查询日志"]
-    )
-    
-    # 获取数据
-    try:
-        df = pd.read_sql_query("SELECT * FROM wiper_specs", conn)
-    except:
-        st.error("无法读取数据")
-        return
-    
-    if menu_option == "📊 数据概览":
-        show_data_overview(conn, df)
-    elif menu_option == "📈 使用统计":
-        show_usage_stats(conn)
-    elif menu_option == "✏️ 数据管理":
-        show_data_management(conn, df)
-    elif menu_option == "🔍 查询日志":
-        show_query_logs(conn)
-
 # 数据显示函数
 def display_results(df, is_admin=False):
     """显示查询结果"""
@@ -210,12 +202,6 @@ def display_results(df, is_admin=False):
                 
                 if specs_text:
                     st.markdown(specs_text)
-            
-            if is_admin:
-                with col2:
-                    if st.button(f"编辑", key=f"edit_{idx}"):
-                        st.session_state.editing_index = idx
-                        st.rerun()
             
             st.markdown("---")
 
@@ -268,12 +254,6 @@ def show_usage_stats(conn):
             with col3:
                 no_result_queries = len(logs_df[logs_df['result_count'] == 0])
                 st.metric("无结果查询", no_result_queries)
-            
-            # 显示热门搜索词
-            st.subheader("热门搜索词")
-            top_searches = logs_df['search_term'].value_counts().head(10)
-            for term, count in top_searches.items():
-                st.write(f"- {term}: {count} 次")
             
             # 显示最近查询
             st.subheader("最近查询记录")
@@ -329,13 +309,58 @@ def show_query_logs(conn):
     except Exception as e:
         st.error(f"读取日志失败: {e}")
 
+# 后台管理页面
+def admin_page(conn):
+    """后台管理界面"""
+    if not check_admin_password():
+        return
+    
+    st.title("⚙️ 管理后台")
+    st.markdown("---")
+    
+    # 管理菜单
+    menu_option = st.sidebar.radio(
+        "管理功能",
+        ["📊 数据概览", "📈 使用统计", "✏️ 数据管理", "🔍 查询日志"]
+    )
+    
+    # 获取数据
+    try:
+        df = pd.read_sql_query("SELECT * FROM wiper_specs", conn)
+    except:
+        st.error("无法读取数据")
+        return
+    
+    if menu_option == "📊 数据概览":
+        show_data_overview(conn, df)
+    elif menu_option == "📈 使用统计":
+        show_usage_stats(conn)
+    elif menu_option == "✏️ 数据管理":
+        show_data_management(conn, df)
+    elif menu_option == "🔍 查询日志":
+        show_query_logs(conn)
+
 # 主应用
 def main():
     """主应用"""
+    # 显示初始化状态
+    st.sidebar.title("系统状态")
+    
     # 初始化数据库
-    conn = init_database()
+    with st.spinner('系统初始化中...'):
+        conn = init_database()
+    
     if conn is None:
-        st.error("系统初始化失败，请检查数据文件")
+        st.error("⚠️ 系统初始化失败，请检查数据文件")
+        
+        # 提供调试信息
+        st.info("""
+        **故障排除步骤:**
+        1. 确保 `wiper_data.xlsx` 文件已上传到 GitHub 仓库
+        2. 检查文件名是否正确（包括扩展名）
+        3. 确认文件在仓库根目录
+        4. 等待几分钟让 Streamlit Cloud 同步文件
+        """)
         return
     
     # 侧边栏导航
@@ -355,7 +380,7 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown("**系统信息**")
     st.sidebar.markdown(f"版本: v1.0")
-    st.sidebar.markdown(f"更新时间: {datetime.now().strftime('%Y-%m-%d')}")
+    st.sidebar.markdown(f"更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
 if __name__ == "__main__":
     main()
