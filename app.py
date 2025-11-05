@@ -44,14 +44,16 @@ def search_wiper_specs(conn, search_term):
 
 # 主页面
 def main():
-    # 显示本地图片
-    st.image(
-        "favicon.ico",
-        width=80
-    )
+    # 创建水平布局：图片 + 文字
+    col1, col2 = st.columns([1, 4])
     
-    # 简洁标题
-    st.markdown("<h2 style='text-align: center; margin-top: -10px;'>雨刷查询</h2>", unsafe_allow_html=True)
+    with col1:
+        # 显示图片
+        st.image("favicon.ico", width=60)
+    
+    with col2:
+        # 标题与图片在同一行
+        st.markdown("<h2 style='margin-top: 15px;'>雨刷查询</h2>", unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
