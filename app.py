@@ -3,7 +3,7 @@ import pandas as pd
 import sqlite3
 import os
 
-# 设置页面配置 - 使用本地的favicon.ico
+# 设置页面配置
 st.set_page_config(
     page_title="雨刷查询",
     page_icon="favicon.ico",
@@ -44,16 +44,13 @@ def search_wiper_specs(conn, search_term):
 
 # 主页面
 def main():
-    # 创建水平布局：图片 + 文字 - 更紧凑
-    col1, col2 = st.columns([1, 5])
-    
-    with col1:
-        # 显示更小的图片
-        st.image("favicon.ico", width=40)
-    
-    with col2:
-        # 标题与图片在同一行，调整垂直对齐
-        st.markdown("<h2 style='margin-top: 8px;'>雨刷查询</h2>", unsafe_allow_html=True)
+    # 方案一：完全居中对齐
+    st.markdown("""
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px;">
+        <img src="favicon.ico" width="45" height="45">
+        <h2 style="margin: 0;">雨刷查询</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
