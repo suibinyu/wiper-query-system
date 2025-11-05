@@ -43,11 +43,17 @@ def search_wiper_specs(conn, search_term):
         return pd.DataFrame()
 
 # 主页面
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.image("favicon.ico", width=40)
-with col2:
-    st.markdown("<h2 style='margin-top: 8px;'>雨刷查询</h2>", unsafe_allow_html=True)
+def main():
+    # 创建水平布局：图片 + 文字 - 更紧凑
+    col1, col2 = st.columns([1, 5])
+    
+    with col1:
+        # 显示更小的图片
+        st.image("favicon.ico", width=40)
+    
+    with col2:
+        # 标题与图片在同一行，调整垂直对齐
+        st.markdown("<h2 style='margin-top: 8px;'>雨刷查询</h2>", unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
