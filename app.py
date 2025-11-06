@@ -2,7 +2,16 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import os
-
+# 隐藏Streamlit的默认菜单和按钮
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 # 设置页面配置
 st.set_page_config(
     page_title="雨刷查询",
@@ -160,3 +169,4 @@ def display_results(df, search_term):
 
 if __name__ == "__main__":
     main()
+
