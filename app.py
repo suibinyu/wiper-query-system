@@ -47,7 +47,7 @@ def main():
     # 方案一：完全居中对齐
     st.markdown("""
     <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px;">
-        <h2 style="margin: 0;">雨刷查询</h2>
+        h2 style='text-align: center;'>🚗 雨刷查询</h2
     </div>
     """, unsafe_allow_html=True)
     
