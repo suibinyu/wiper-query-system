@@ -1,104 +1,141 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
-import os
 
-# 设置页面配置
+# 页面设置
 st.set_page_config(
-    page_title="雨刷查询",
-    page_icon="🚗",
-    layout="centered",
-    initial_sidebar_state="collapsed"
+    page_title="雨刷尺寸查询系统",
+    page_icon="🌧️",
+    layout="centered"
 )
 
-# 初始化数据库
-@st.cache_resource
-def init_database():
-    try:
-        if not os.path.exists("wiper_data.xlsx"):
-            return None
-        
-        df = pd.read_excel("wiper_data.xlsx")
-        conn = sqlite3.connect('wiper_system.db', check_same_thread=False)
-        df.to_sql('wiper_specs', conn, if_exists='replace', index=False)
-        return conn
-    except:
-        return None
+# 应用标题
+st.title("🌧️ 汽车雨刷尺寸查询系统")
+st.markdown("输入您的车型名称，查询对应的雨刷尺寸和接头类型")
 
-# 查询函数
-def search_wiper_specs(conn, search_term):
+# 加载Excel数据
+@st.cache_data
+def load_excel_data():
     try:
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA table_info(wiper_specs)")
-        columns = [col[1] for col in cursor.fetchall()]
-        
-        if '车系' in columns:
-            query = "SELECT * FROM wiper_specs WHERE 车系 LIKE ?"
-        else:
-            query = "SELECT * FROM wiper_specs WHERE model_series LIKE ?"
-        
-        search_term = f"%{search_term}%"
-        return pd.read_sql_query(query, conn, params=[search_term])
-    except:
+        # 读取数据
+        wiper_data = pd.read_excel('data/wiper_data.xlsx', sheet_name='wiper_data')
+        return wiper_data
+    except FileNotFoundError:
+        st.error("数据文件未找到，请确保 data/wiper_data.xlsx 文件存在")
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"读取数据文件时出错: {e}")
         return pd.DataFrame()
 
-# 主页面
-def main():
-    # 简洁标题
-    st.markdown("<h2 style='text-align: center;'>🚗 雨刷查询</h2>", unsafe_allow_html=True)
-    
-    # 搜索框
-    search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
-    
-    # 搜索按钮
-    if st.button("查询", use_container_width=True):
-        conn = init_database()
-        if conn and search_term:
-            results = search_wiper_specs(conn, search_term)
-            display_results(results, search_term)
-        elif not search_term:
-            st.warning("请输入车系名称")
-        else:
-            st.error("系统暂不可用")
+# 加载数据
+wiper_data = load_excel_data()
 
-# 简洁结果显示
-def display_results(df, search_term):
-    if df.empty:
-        st.info(f"未找到『{search_term}』相关记录")
-        return
-    
-    st.success(f"找到 {len(df)} 条记录")
-    
-    for idx, row in df.iterrows():
-        # 获取数据
-        brand = row.get('品牌', '') or row.get('brand', '')
-        model = row.get('车系', '') or row.get('model_series', '')
-        year = row.get('年款', '') or row.get('year', '')
-        
-        front_driver = row.get('前雨刷主驾尺寸', '') or row.get('front_driver_size', '')
-        front_passenger = row.get('前雨刷副驾尺寸', '') or row.get('front_passenger_size', '')
-        rear = row.get('后雨刷尺寸', '') or row.get('rear_size', '')
-        connector = row.get('接头类型', '') or row.get('connector_type', '')
-        
-        # 紧凑显示
-        st.markdown(f"**{brand} {model}** · {year}")
-        
-        specs = []
-        if front_driver and front_passenger:
-            specs.append(f"前: {front_driver}+{front_passenger}″")
-        elif front_driver:
-            specs.append(f"前: {front_driver}″")
-        
-        if rear:
-            specs.append(f"后: {rear}″")
-        
-        if connector:
-            specs.append(f"接头: {connector}")
-        
-        if specs:
-            st.markdown(f"<small>{' | '.join(specs)}</small>", unsafe_allow_html=True)
-        
-        st.markdown("---")
+if wiper_data.empty:
+    st.stop()
 
-if __name__ == "__main__":
-    main()
+# 搜索框
+st.markdown("### 🔍 输入车型名称搜索")
+search_term = st.text_input(
+    "请输入车型名称（例如：卡罗拉、CR-V、3系等）", 
+    placeholder="输入车型名称...",
+    key="search_input"
+)
+
+# 显示搜索结果
+if search_term:
+    # 搜索逻辑：在车型列中查找包含搜索词的行（不区分大小写）
+    search_results = wiper_data[
+        wiper_data['车型'].str.contains(search_term, case=False, na=False)
+    ]
+    
+    if not search_results.empty:
+        st.success(f"✅ 找到 {len(search_results)} 个匹配车型")
+        
+        # 显示每个匹配的结果
+        for idx, result in search_results.iterrows():
+            with st.container():
+                st.markdown("---")
+                col1, col2 = st.columns([1, 2])
+                
+                with col1:
+                    st.subheader(f"{result['品牌']} {result['车型']}")
+                    st.caption(f"年份: {result['年份']}")
+                
+                with col2:
+                    col2_1, col2_2, col2_3 = st.columns(3)
+                    
+                    with col2_1:
+                        st.metric("主驾尺寸", f"{result['主驾雨刷尺寸(寸)']}寸")
+                    
+                    with col2_2:
+                        st.metric("副驾尺寸", f"{result['副驾雨刷尺寸(寸)']}寸")
+                    
+                    with col2_3:
+                        st.metric("接头类型", result['主驾接头类型'])
+                
+                # 显示备注（如果有）
+                if pd.notna(result['备注']) and result['备注'] != '':
+                    st.info(f"备注: {result['备注']}")
+        
+        # 显示数据表格（可选）
+        with st.expander("📋 查看详细数据表格"):
+            display_columns = ['品牌', '车型', '年份', '主驾雨刷尺寸(寸)', '副驾雨刷尺寸(寸)', '主驾接头类型', '副驾接头类型']
+            st.dataframe(
+                search_results[display_columns],
+                use_container_width=True,
+                hide_index=True
+            )
+    else:
+        st.warning("⚠️ 没有找到匹配的车型，请尝试以下建议：")
+        st.markdown("""
+        - 检查拼写是否正确
+        - 尝试使用更通用的车型名称（如只输入'卡罗'而不是'卡罗拉'）
+        - 或浏览下面的热门车型
+        """)
+
+# 热门车型推荐（当没有搜索或搜索无结果时显示）
+if not search_term or (search_term and search_results.empty):
+    st.markdown("### 🚗 热门车型参考")
+    
+    # 显示一些热门车型作为参考
+    popular_models = wiper_data.head(8)  # 显示前8个车型作为热门参考
+    
+    cols = st.columns(4)
+    for idx, (col, model) in enumerate(zip(cols, popular_models.iterrows())):
+        _, model_data = model
+        with col:
+            st.button(
+                f"{model_data['品牌']} {model_data['车型']}",
+                key=f"model_{idx}",
+                use_container_width=True,
+                on_click=lambda x=model_data['车型']: st.session_state.update({"search_input": x})
+            )
+
+# 接头类型说明
+st.markdown("---")
+st.markdown("### 💡 接头类型说明")
+
+connector_info = {
+    "U型": "传统的U型挂钩，安装简单，适用于大多数经济型车型",
+    "直插式": "直接插入的接头，常见于日系和部分国产车型",
+    "勾型": "钩子式连接，多见于美系和部分欧系车型",
+    "侧插式": "从侧面插入的接头，常见于高端车型"
+}
+
+cols = st.columns(4)
+for idx, (connector_type, description) in enumerate(connector_info.items()):
+    with cols[idx]:
+        st.metric(connector_type, description)
+
+# 底部信息
+st.markdown("---")
+st.markdown("""
+**使用说明:**
+1. 在搜索框中输入您的车型名称
+2. 系统将显示匹配的车型及其雨刷规格
+3. 点击热门车型按钮可以快速搜索
+
+**注意事项:**
+- 不同年份的同款车型可能有不同的雨刷规格
+- 本数据仅供参考，请以实际测量为准
+- 如有疑问，建议咨询专业汽车配件店
+""")
