@@ -31,7 +31,7 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 # 设置页面配置
 st.set_page_config(
-    page_title="雨刷查询",
+    page_title="赫纳雨刷查询",
     page_icon="🚗",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -186,5 +186,6 @@ def display_results(df, search_term):
 
 if __name__ == "__main__":
     main()
+
 
 
