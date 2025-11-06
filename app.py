@@ -37,22 +37,25 @@ def init_database():
         st.error(f"初始化失败: {e}")
         return None
 
-# 查询函数
+# 简化的查询函数 - 只搜索车型字段
 def search_wiper_specs(conn, search_term):
     try:
         cursor = conn.cursor()
         cursor.execute("PRAGMA table_info(wiper_specs)")
         columns = [col[1] for col in cursor.fetchall()]
         
-        # 使用新的列名查询
+        # 只搜索车型字段
         if '车型' in columns:
-            query = "SELECT * FROM wiper_specs WHERE 车型 LIKE ?"
+            query = "SELECT * FROM wiper_specs WHERE 车型 LIKE ? ORDER BY 品牌, 年份 DESC"
         else:
-            query = "SELECT * FROM wiper_specs WHERE model LIKE ?"
+            query = "SELECT * FROM wiper_specs WHERE model LIKE ? ORDER BY brand, year DESC"
         
-        search_term = f"%{search_term}%"
-        return pd.read_sql_query(query, conn, params=[search_term])
-    except:
+        search_pattern = f"%{search_term}%"
+        df_result = pd.read_sql_query(query, conn, params=[search_pattern])
+        return df_result
+        
+    except Exception as e:
+        st.error(f"查询失败: {e}")
         return pd.DataFrame()
 
 # 主页面
@@ -67,17 +70,51 @@ def main():
     if st.button("查询", use_container_width=True):
         conn = init_database()
         if conn and search_term:
-            results = search_wiper_specs(conn, search_term)
-            display_results(results, search_term)
+            # 提取纯车型关键词（移除品牌信息）
+            clean_search_term = extract_model_keyword(search_term)
+            results = search_wiper_specs(conn, clean_search_term)
+            display_results(results, clean_search_term)
         elif not search_term:
             st.warning("请输入车型名称")
         else:
             st.error("系统暂不可用")
 
-# 简洁结果显示 - 修改了显示顺序
+# 提取纯车型关键词的函数
+def extract_model_keyword(search_term):
+    """从搜索词中提取纯车型关键词"""
+    # 常见的汽车品牌列表
+    common_brands = [
+        '大众', '丰田', '本田', '日产', '宝马', '奔驰', '奥迪', '现代', 
+        '起亚', '福特', '雪佛兰', '别克', '标致', '雪铁龙', '马自达',
+        '斯巴鲁', '三菱', '铃木', '沃尔沃', '雷克萨斯', '英菲尼迪',
+        '讴歌', '凯迪拉克', '林肯', '捷豹', '路虎', '保时捷', '法拉利',
+        '兰博基尼', '玛莎拉蒂', '特斯拉', '蔚来', '理想', '小鹏', '比亚迪'
+    ]
+    
+    # 移除品牌信息
+    clean_term = search_term
+    for brand in common_brands:
+        if brand in clean_term:
+            clean_term = clean_term.replace(brand, '')
+    
+    # 移除可能的多余空格和符号
+    clean_term = clean_term.strip().replace(' ', '').replace('·', '')
+    
+    # 如果移除品牌后为空，则使用原词
+    if not clean_term:
+        return search_term
+    
+    return clean_term
+
+# 简洁结果显示
 def display_results(df, search_term):
     if df.empty:
         st.info(f"未找到『{search_term}』相关记录")
+        st.markdown("""
+        💡 **搜索提示**：
+        - 请输入车型名称，如："高尔夫"
+        - 支持模糊搜索，输入"高尔"也能找到高尔夫
+        """)
         return
     
     st.success(f"找到 {len(df)} 条记录")
@@ -90,8 +127,8 @@ def display_results(df, search_term):
         
         front_driver = row.get('主驾', '')
         front_passenger = row.get('副驾', '')
-        connector = row.get('接头', '')  # 接头移到前面
-        rear = row.get('后雨刷', '')     # 后雨刷移到后面
+        connector = row.get('接头', '')
+        rear = row.get('后雨刷', '')
         note = row.get('备注', '')
         
         # 紧凑显示
