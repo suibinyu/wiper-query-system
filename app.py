@@ -2,36 +2,6 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import os
-# 最彻底的隐藏方案
-hide_all_elements = """
-    <style>
-    /* 隐藏所有可能的Streamlit元素 */
-    #MainMenu {visibility: hidden !important;}
-    footer {visibility: hidden !important;}
-    header {visibility: hidden !important;}
-    
-    /* 隐藏部署相关按钮 */
-    .stDeployButton {display: none !important;}
-    .stAppDeployButton {display: none !important;}
-    [data-testid="stAppDeployButton"] {display: none !important;}
-    
-    /* 隐藏工具栏和装饰 */
-    #stDecoration {display: none !important;}
-    .stToolbar {display: none !important;}
-    [data-testid="baseButton-header"] {display: none !important;}
-    
-    /* 隐藏可能出现在右下角的其他元素 */
-    .stApp > div:last-child {
-        display: none !important;
-    }
-    
-    /* 隐藏右下角浮动按钮 */
-    .stApp > div[style*="position: fixed"] {
-        display: none !important;
-    }
-    </style>
-"""
-st.markdown(hide_all_elements, unsafe_allow_html=True)
 # 隐藏所有Streamlit的默认元素，包括右下角按钮
 hide_streamlit_style = """
     <style>
