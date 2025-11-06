@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import os
 
 # 页面设置
 st.set_page_config(
@@ -16,12 +17,31 @@ st.markdown("输入车型名称，查询对应的雨刷尺寸和接头类型")
 @st.cache_data
 def load_excel_data():
     try:
-        # 读取数据
-        wiper_data = pd.read_excel('data/wiper_data.xlsx', sheet_name='wiper_data')
-        return wiper_data
-    except FileNotFoundError:
-        st.error("数据文件未找到，请确保 data/wiper_data.xlsx 文件存在")
-        return pd.DataFrame()
+        # 尝试直接加载根目录下的Excel文件
+        file_path = 'wiper_data.xlsx'
+        
+        if os.path.exists(file_path):
+            wiper_data = pd.read_excel(file_path, sheet_name='wiper_data')
+            st.success("成功加载数据文件")
+            return wiper_data
+        else:
+            # 如果文件不存在，创建示例数据
+            st.warning("未找到数据文件，正在创建示例数据...")
+            sample_data = pd.DataFrame({
+                '品牌': ['丰田', '本田', '大众', '日产', '丰田', '本田'],
+                '车型': ['卡罗拉', '思域', '朗逸', '轩逸', 'RAV4', 'CR-V'],
+                '年份': ['2019-2023', '2016-2021', '2018-2023', '2019-2023', '2019-2023', '2017-2023'],
+                '主驾': [26, 26, 24, 26, 26, 26],
+                '副驾': [16, 16, 18, 16, 18, 18],
+                '接头': ['U型', 'U型', '直插式', 'U型', '直插式', '勾型'],
+                '后雨刷': [12, 11, '-', 12, 14, 12]
+            })
+            
+            # 保存示例数据到根目录
+            sample_data.to_excel('wiper_data.xlsx', index=False, sheet_name='wiper_data')
+            st.success("已创建示例数据文件: wiper_data.xlsx")
+            return sample_data
+        
     except Exception as e:
         st.error(f"读取数据文件时出错: {e}")
         return pd.DataFrame()
@@ -126,6 +146,28 @@ if search_term:
     elif search_term:
         st.sidebar.warning("未找到匹配的记录")
 
+# 文件上传功能
+st.sidebar.markdown("---")
+st.sidebar.subheader("📁 上传数据文件")
+uploaded_file = st.sidebar.file_uploader("上传Excel文件", type=['xlsx'])
+
+if uploaded_file is not None:
+    try:
+        new_data = pd.read_excel(uploaded_file, sheet_name='wiper_data')
+        if all(col in new_data.columns for col in ['品牌', '车型', '年份', '主驾', '副驾', '接头', '后雨刷']):
+            # 保存上传的文件到根目录
+            with open('wiper_data.xlsx', 'wb') as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # 清除缓存并重新加载数据
+            st.cache_data.clear()
+            st.sidebar.success("数据文件上传成功！")
+            st.experimental_rerun()
+        else:
+            st.sidebar.error("文件格式不正确，请确保包含所有必要列")
+    except Exception as e:
+        st.sidebar.error(f"文件读取失败: {e}")
+
 # 数据统计和信息展示
 st.markdown("---")
 col3, col4, col5 = st.columns(3)
@@ -148,7 +190,17 @@ st.markdown("""
 1. **查询雨刷尺寸**: 在左侧边栏选择品牌和车型即可查看对应的雨刷尺寸
 2. **筛选接头类型**: 可以按特定接头类型进行筛选
 3. **关键词搜索**: 使用搜索功能快速查找特定车型
-4. **数据说明**: 
+4. **上传数据**: 可以通过侧边栏上传自己的Excel数据文件
+5. **数据说明**: 
    - 所有数据仅供参考，建议购买前确认实际规格
    - 后雨刷列中"-"表示该车型无后雨刷
 """)
+
+# 数据文件状态
+st.sidebar.markdown("---")
+st.sidebar.subheader("📊 数据状态")
+st.sidebar.write(f"当前数据版本: {len(wiper_data)} 条记录")
+st.sidebar.write(f"包含品牌: {len(wiper_data['品牌'].unique())} 个")
+if st.sidebar.button("重新加载数据"):
+    st.cache_data.clear()
+    st.experimental_rerun()
