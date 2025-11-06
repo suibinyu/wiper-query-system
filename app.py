@@ -87,7 +87,7 @@ def search_wiper_specs(conn, search_term):
 # 主页面
 def main():
     # 简洁标题
-    st.markdown("<h2 style='text-align: center;'>🚗 雨刷查询</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>🚗 赫纳雨刷查询</h2>", unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车型名称，如：高尔夫")
@@ -186,6 +186,7 @@ def display_results(df, search_term):
 
 if __name__ == "__main__":
     main()
+
 
 
 
