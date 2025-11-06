@@ -45,11 +45,7 @@ def search_wiper_specs(conn, search_term):
 # 主页面
 def main():
     # 方案一：完全居中对齐
-    st.markdown("""
-    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px;">
-        h2 style='text-align: center;'>🚗 雨刷查询</h2
-    </div>
-    """, unsafe_allow_html=True)
+   st.markdown("<h2 style='text-align: center;'>🚗 雨刷查询</h2>", unsafe_allow_html=True)
     
     # 搜索框
     search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
