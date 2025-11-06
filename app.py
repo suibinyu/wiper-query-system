@@ -35,9 +35,31 @@ def load_excel_data():
                 break
         
         if found_file and os.path.exists(found_file):
-            wiper_data = pd.read_excel(found_file, sheet_name='wiper_data')
-            st.success(f"成功加载数据文件: {found_file}")
-            return wiper_data
+            # 首先检查Excel文件中的工作表名称
+            excel_file = pd.ExcelFile(found_file)
+            sheet_names = excel_file.sheet_names
+            st.info(f"找到的工作表: {sheet_names}")
+            
+            # 尝试找到包含数据的工作表
+            target_sheet = None
+            possible_sheet_names = ['wiper_data', 'Sheet1', 'Sheet', '数据', '雨刷数据']
+            
+            for sheet_name in possible_sheet_names:
+                if sheet_name in sheet_names:
+                    target_sheet = sheet_name
+                    break
+            
+            # 如果没找到预定义的工作表名称，使用第一个工作表
+            if not target_sheet and sheet_names:
+                target_sheet = sheet_names[0]
+            
+            if target_sheet:
+                wiper_data = pd.read_excel(found_file, sheet_name=target_sheet)
+                st.success(f"成功加载数据文件: {found_file} (工作表: {target_sheet})")
+                return wiper_data
+            else:
+                st.error(f"在文件 {found_file} 中未找到有效的工作表")
+                return pd.DataFrame()
         else:
             # 如果文件不存在，创建示例数据
             st.warning("未找到数据文件，正在创建示例数据...")
@@ -64,6 +86,15 @@ def load_excel_data():
 wiper_data = load_excel_data()
 
 if wiper_data.empty:
+    st.stop()
+
+# 检查数据列是否完整
+required_columns = ['品牌', '车型', '年份', '主驾', '副驾', '接头', '后雨刷']
+missing_columns = [col for col in required_columns if col not in wiper_data.columns]
+
+if missing_columns:
+    st.error(f"数据文件缺少必要的列: {missing_columns}")
+    st.info("请确保数据文件包含以下列: 品牌, 车型, 年份, 主驾, 副驾, 接头, 后雨刷")
     st.stop()
 
 # 侧边栏
@@ -167,18 +198,42 @@ uploaded_file = st.sidebar.file_uploader("上传Excel文件", type=['xlsx'])
 
 if uploaded_file is not None:
     try:
-        new_data = pd.read_excel(uploaded_file, sheet_name='wiper_data')
-        if all(col in new_data.columns for col in ['品牌', '车型', '年份', '主驾', '副驾', '接头', '后雨刷']):
-            # 保存上传的文件
-            with open('wiper_data.xlsx', 'wb') as f:
-                f.write(uploaded_file.getbuffer())
+        # 检查上传文件的工作表
+        excel_file = pd.ExcelFile(uploaded_file)
+        sheet_names = excel_file.sheet_names
+        st.sidebar.info(f"上传文件的工作表: {sheet_names}")
+        
+        # 尝试找到合适的工作表
+        target_sheet = None
+        possible_sheet_names = ['wiper_data', 'Sheet1', 'Sheet', '数据', '雨刷数据']
+        
+        for sheet_name in possible_sheet_names:
+            if sheet_name in sheet_names:
+                target_sheet = sheet_name
+                break
+        
+        # 如果没找到预定义的工作表名称，使用第一个工作表
+        if not target_sheet and sheet_names:
+            target_sheet = sheet_names[0]
+        
+        if target_sheet:
+            new_data = pd.read_excel(uploaded_file, sheet_name=target_sheet)
             
-            # 清除缓存并重新加载数据
-            st.cache_data.clear()
-            st.sidebar.success("数据文件上传成功！")
-            st.experimental_rerun()
+            # 检查必要的列是否存在
+            if all(col in new_data.columns for col in required_columns):
+                # 保存上传的文件
+                with open('wiper_data.xlsx', 'wb') as f:
+                    f.write(uploaded_file.getbuffer())
+                
+                # 清除缓存并重新加载数据
+                st.cache_data.clear()
+                st.sidebar.success(f"数据文件上传成功！(工作表: {target_sheet})")
+                st.experimental_rerun()
+            else:
+                missing_cols = [col for col in required_columns if col not in new_data.columns]
+                st.sidebar.error(f"文件缺少必要的列: {missing_cols}")
         else:
-            st.sidebar.error("文件格式不正确，请确保包含所有必要列")
+            st.sidebar.error("上传的文件中没有找到有效的工作表")
     except Exception as e:
         st.sidebar.error(f"文件读取失败: {e}")
 
