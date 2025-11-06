@@ -1,0 +1,175 @@
+import streamlit as st
+import pandas as pd
+import sqlite3
+import os
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# 设置页面配置
+st.set_page_config(
+    page_title="雨刷查询系统",
+    page_icon="🚗",
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
+
+# 初始化数据库
+@st.cache_resource
+def init_database():
+    """初始化数据库"""
+    try:
+        excel_file_path = "wiper_data.xlsx"
+        
+        if not os.path.exists(excel_file_path):
+            st.error("❌ 数据文件未找到")
+            logger.error("Excel文件不存在")
+            return None
+        
+        # 读取Excel数据
+        df = pd.read_excel(excel_file_path)
+        logger.info(f"成功读取Excel文件，共 {len(df)} 条记录")
+        
+        # 创建数据库连接
+        conn = sqlite3.connect('wiper_system.db', check_same_thread=False)
+        
+        # 导入数据到SQLite
+        df.to_sql('wiper_specs', conn, if_exists='replace', index=False)
+        logger.info("数据成功导入SQLite数据库")
+        
+        return conn
+        
+    except Exception as e:
+        logger.error(f"数据库初始化失败: {str(e)}")
+        st.error(f"❌ 系统初始化失败: {str(e)}")
+        return None
+
+# 查询函数
+def search_wiper_specs(conn, search_term):
+    """搜索雨刷规格"""
+    try:
+        # 检测列名
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(wiper_specs)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        # 构建查询
+        if '车系' in columns:
+            query = "SELECT * FROM wiper_specs WHERE 车系 LIKE ? ORDER BY 品牌, 年款 DESC"
+        elif 'model_series' in columns:
+            query = "SELECT * FROM wiper_specs WHERE model_series LIKE ? ORDER BY brand, year DESC"
+        else:
+            # 使用第一个文本列
+            text_columns = [col[1] for col in columns if col[2] == 'TEXT' and col[1] != 'id']
+            if text_columns:
+                query = f"SELECT * FROM wiper_specs WHERE {text_columns[0]} LIKE ?"
+            else:
+                return pd.DataFrame()
+        
+        search_term = f"%{search_term}%"
+        df_result = pd.read_sql_query(query, conn, params=[search_term])
+        logger.info(f"搜索 '{search_term}' 找到 {len(df_result)} 条记录")
+        
+        return df_result
+        
+    except Exception as e:
+        logger.error(f"查询失败: {str(e)}")
+        st.error("查询过程中出现错误")
+        return pd.DataFrame()
+
+# 主页面
+def main():
+    # 标题布局
+    col1, col2 = st.columns([1, 3])
+    
+    with col1:
+        st.image(
+            "https://5b0988e595225.cdn.sohucs.com/images/20190628/c3887e7c8841462bb0e6e27bf3c84062.jpeg",
+            width=50
+        )
+    
+    with col2:
+        st.markdown("<h2 style='margin-top: 10px;'>雨刷查询</h2>", unsafe_allow_html=True)
+    
+    # 搜索功能
+    search_term = st.text_input("", placeholder="输入车系名称，如：高尔夫")
+    
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        search_clicked = st.button("🔍 查询", use_container_width=True)
+    
+    # 执行查询
+    if search_clicked:
+        if search_term:
+            with st.spinner('搜索中...'):
+                conn = init_database()
+                if conn:
+                    results = search_wiper_specs(conn, search_term)
+                    display_results(results, search_term)
+                else:
+                    st.error("系统初始化失败，请刷新页面重试")
+        else:
+            st.warning("请输入车系名称")
+    
+    # 使用说明
+    with st.expander("📖 使用说明", expanded=False):
+        st.markdown("""
+        - **输入车系名称**：在搜索框中输入车辆系列名称
+        - **点击查询**：系统会自动匹配相关车型
+        - **查看结果**：显示雨刷尺寸和接头类型信息
+        - **模糊搜索**：支持不完整名称搜索
+        """)
+
+# 结果显示函数
+def display_results(df, search_term):
+    """显示查询结果"""
+    if df.empty:
+        st.info(f"未找到与『{search_term}』相关的记录")
+        st.markdown("""
+        💡 **建议**：
+        - 检查车系名称是否正确
+        - 尝试使用更简短的关键词
+        - 确认车系名称的完整性
+        """)
+        return
+    
+    st.success(f"找到 {len(df)} 条匹配记录")
+    
+    for idx, row in df.iterrows():
+        # 适配中英文列名
+        brand = row.get('品牌', '') or row.get('brand', '')
+        model = row.get('车系', '') or row.get('model_series', '')
+        year = row.get('年款', '') or row.get('year', '')
+        trim = row.get('车型配置', '') or row.get('trim', '')
+        
+        front_driver = row.get('前雨刷主驾尺寸', '') or row.get('front_driver_size', '')
+        front_passenger = row.get('前雨刷副驾尺寸', '') or row.get('front_passenger_size', '')
+        rear = row.get('后雨刷尺寸', '') or row.get('rear_size', '')
+        connector = row.get('接头类型', '') or row.get('connector_type', '')
+        
+        # 显示结果
+        st.markdown(f"**{brand} {model}** · {year}")
+        if pd.notna(trim) and str(trim) != 'nan' and str(trim) != '':
+            st.markdown(f"*{trim}*")
+        
+        specs = []
+        if pd.notna(front_driver) and pd.notna(front_passenger):
+            specs.append(f"前: {front_driver}+{front_passenger}″")
+        elif pd.notna(front_driver):
+            specs.append(f"前: {front_driver}″")
+        
+        if pd.notna(rear) and str(rear) != 'nan' and str(rear) != '':
+            specs.append(f"后: {rear}″")
+        
+        if pd.notna(connector) and str(connector) != 'nan' and str(connector) != '':
+            specs.append(f"接头: {connector}")
+        
+        if specs:
+            st.markdown(f"<small>{' | '.join(specs)}</small>", unsafe_allow_html=True)
+        
+        st.markdown("---")
+
+if __name__ == "__main__":
+    main()
