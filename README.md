@@ -1,2 +1,0 @@
-# wiper-query-system
-yushuachaxun
