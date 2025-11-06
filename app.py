@@ -3,13 +3,30 @@ import pandas as pd
 import sqlite3
 import os
 
-# 隐藏Streamlit的默认菜单和按钮
+# 隐藏所有Streamlit的默认元素，包括右下角按钮
 hide_streamlit_style = """
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .stDeployButton {visibility: hidden;}
+    .stDeployButton {display: none;}
+    #stDecoration {display: none;}
+    .stToolbar {display: none;}
+    
+    /* 隐藏右下角的部署按钮 */
+    .stAppDeployButton {
+        display: none !important;
+    }
+    
+    /* 隐藏可能出现的其他右下角元素 */
+    [data-testid="stAppDeployButton"] {
+        display: none !important;
+    }
+    
+    /* 隐藏Streamlit的菜单按钮 */
+    [data-testid="baseButton-header"] {
+        display: none !important;
+    }
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
