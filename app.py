@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import glob
 
 # 页面设置
 st.set_page_config(
@@ -17,12 +18,25 @@ st.markdown("输入车型名称，查询对应的雨刷尺寸和接头类型")
 @st.cache_data
 def load_excel_data():
     try:
-        # 尝试直接加载根目录下的Excel文件
-        file_path = 'wiper_data.xlsx'
+        # 尝试查找可能的Excel文件
+        possible_files = [
+            'wiper_data.xlsx',
+            'wiper_data(1).xlsx',
+            '雨刷数据.xlsx',
+            'wiper_data*.xlsx'  # 通配符匹配
+        ]
         
-        if os.path.exists(file_path):
-            wiper_data = pd.read_excel(file_path, sheet_name='wiper_data')
-            st.success("成功加载数据文件")
+        found_file = None
+        for file_pattern in possible_files:
+            # 使用glob匹配文件模式
+            matches = glob.glob(file_pattern)
+            if matches:
+                found_file = matches[0]
+                break
+        
+        if found_file and os.path.exists(found_file):
+            wiper_data = pd.read_excel(found_file, sheet_name='wiper_data')
+            st.success(f"成功加载数据文件: {found_file}")
             return wiper_data
         else:
             # 如果文件不存在，创建示例数据
@@ -37,7 +51,7 @@ def load_excel_data():
                 '后雨刷': [12, 11, '-', 12, 14, 12]
             })
             
-            # 保存示例数据到根目录
+            # 保存示例数据
             sample_data.to_excel('wiper_data.xlsx', index=False, sheet_name='wiper_data')
             st.success("已创建示例数据文件: wiper_data.xlsx")
             return sample_data
@@ -155,7 +169,7 @@ if uploaded_file is not None:
     try:
         new_data = pd.read_excel(uploaded_file, sheet_name='wiper_data')
         if all(col in new_data.columns for col in ['品牌', '车型', '年份', '主驾', '副驾', '接头', '后雨刷']):
-            # 保存上传的文件到根目录
+            # 保存上传的文件
             with open('wiper_data.xlsx', 'wb') as f:
                 f.write(uploaded_file.getbuffer())
             
@@ -201,6 +215,12 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("📊 数据状态")
 st.sidebar.write(f"当前数据版本: {len(wiper_data)} 条记录")
 st.sidebar.write(f"包含品牌: {len(wiper_data['品牌'].unique())} 个")
+
+# 显示当前使用的数据文件
+current_files = glob.glob('wiper_data*.xlsx')
+if current_files:
+    st.sidebar.write(f"数据文件: {', '.join(current_files)}")
+
 if st.sidebar.button("重新加载数据"):
     st.cache_data.clear()
     st.experimental_rerun()
