@@ -74,7 +74,7 @@ def main():
         else:
             st.error("系统暂不可用")
 
-# 简洁结果显示
+# 简洁结果显示 - 修改了显示顺序
 def display_results(df, search_term):
     if df.empty:
         st.info(f"未找到『{search_term}』相关记录")
@@ -90,8 +90,8 @@ def display_results(df, search_term):
         
         front_driver = row.get('主驾', '')
         front_passenger = row.get('副驾', '')
-        rear = row.get('后雨刷', '')
-        connector = row.get('接头', '')
+        connector = row.get('接头', '')  # 接头移到前面
+        rear = row.get('后雨刷', '')     # 后雨刷移到后面
         note = row.get('备注', '')
         
         # 紧凑显示
@@ -104,11 +104,13 @@ def display_results(df, search_term):
         elif front_driver:
             specs.append(f"雨刷: {front_driver}″")
         
-        if rear and str(rear) != 'nan':
-            specs.append(f"后雨刷: {rear}″")
-        
+        # 接头信息排在前面
         if connector and str(connector) != 'nan':
             specs.append(f"接头: {connector}")
+        
+        # 后雨刷信息排在后面
+        if rear and str(rear) != 'nan':
+            specs.append(f"后雨刷: {rear}″")
         
         if specs:
             st.markdown(f"<small>{' | '.join(specs)}</small>", unsafe_allow_html=True)
